@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  mongodb-shopping:
+    image: mongo:7.0
+    container_name: shopping-app-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: shopping-app
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
