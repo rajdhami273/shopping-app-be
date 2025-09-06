@@ -1,13 +1,42 @@
 require("dotenv").config();
 
 const express = require("express");
-const app = express();
-const port = process.env.PORT || 3001;
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
+const path = require("path");
+const connectDB = require("./services/db");
+const apiRoutes = require("./api/v1/routes");
 
-app.get("/", (req, res) => {
-  res.send("Welcome to the Shopping App Backend, Manasa996");
+// create express app
+const app = express();
+
+// connect to database
+connectDB();
+
+// setup middleware
+app.use(express.json()); // parse json bodies
+app.use(express.urlencoded({ extended: true, limit: "5mb" })); // parse urlencoded bodies, multipart/form-data
+app.use(cookieParser()); // parse cookies
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+  })
+);
+
+// static routes
+app.use(express.static(path.join(__dirname, "..", "public")));
+
+// health check route
+app.get("/health", (_, res) => {
+  res.send({ message: "Server is running" });
 });
 
+// api routes
+app.use("/api/v1", apiRoutes);
+
+// start server
+const port = process.env.PORT || 3001;
 app.listen(port, (err) => {
   if (err) {
     console.log(err);
