@@ -75,6 +75,18 @@ const UserSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: {
+      transform: function (_, ret) {
+        delete ret.passwordHash;
+        return ret;
+      },
+    },
+    toObject: {
+      transform: function (_, ret) {
+        delete ret.passwordHash;
+        return ret;
+      },
+    },
   }
 );
 

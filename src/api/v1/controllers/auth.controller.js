@@ -8,9 +8,11 @@ const {
   generateRefreshToken,
   verifyRefreshToken,
 } = require("../../../utils/token");
+const { generateOTP } = require("../../../utils/otp");
 
 const User = require("../models/User.model");
 const RefreshToken = require("../models/RefreshToken.model");
+const Otp = require("../models/Otp.model");
 
 async function register(req, res) {
   try {
@@ -39,9 +41,14 @@ async function register(req, res) {
       gender,
     }).save();
 
-    // send verification email
-
-    // send verification code
+    // generate otp
+    const otp = generateOTP();
+    await new Otp({
+      email,
+      otp,
+      expiresAt: Date.now() + 3 * 60 * 1000,
+    }).save();
+    console.log(otp);
 
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
@@ -62,6 +69,7 @@ async function register(req, res) {
       },
     });
   } catch (error) {
+    console.log(error);
     return res.status(500).json({ message: "Internal server error" });
   }
 }
@@ -71,21 +79,39 @@ async function verifyEmail(req, res) {
     const { email, otp } = req.body;
     // find otp doc with email and otp and then delete it
     const otpDoc = await Otp.findOne({ email, otp });
+    if (!otpDoc) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
     // check if otpDoc is expired
     if (otpDoc.expiresAt < Date.now()) {
-      return res.status(400).json({ message: "OTP expired" });
+      // now resend a new otp
+      // generate new otp doc with new otp and email
+      const newOtp = generateOTP();
+      await otpDoc
+        .updateOne({
+          otp: newOtp,
+          expiresAt: Date.now() + 3 * 60 * 1000,
+        })
+        .save();
+      console.log(newOtp);
+      return res.status(400).json({ message: "OTP expired, new OTP sent." });
     }
     // delete otpDoc
     await otpDoc.deleteOne();
-    // now resend a new otp
-    // generate new otp doc with new otp and email
-    const newOtpDoc = await new Otp({
-      email,
-      otp: newOtp,
-      expiresAt: Date.now() + 10 * 60 * 1000,
-    }).save();
-
-    // update user activeStatus to true
+    await User.updateOne(
+      { email: RegExp(email, "i") },
+      {
+        $set: {
+          activeStatus: {
+            isActive: true,
+            inactiveReason: "",
+            inactiveCode: "",
+            inactiveDate: "",
+            activeDate: new Date(),
+          },
+        },
+      }
+    );
     return res.status(200).json({ message: "Email verified successfully" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
@@ -158,4 +184,70 @@ async function refreshAccessToken(req, res) {
   }
 }
 
-module.exports = { register, login, logout, refreshAccessToken };
+async function disableAccount(req, res) {
+  try {
+    const { userId } = req.params;
+    const { inactiveReason, inactiveCode } = req.body;
+    const user = await User.findByIdAndUpdate(userId, {
+      activeStatus: {
+        isActive: false,
+        inactiveReason,
+        inactiveCode,
+        inactiveDate: new Date(),
+        activeDate: null,
+      },
+    });
+    return res
+      .status(200)
+      .json({ message: "Account disabled successfully", data: user });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+async function deleteAccount(req, res) {
+  try {
+    const { userId } = req.params;
+    await User.findByIdAndDelete(userId);
+    return res.status(200).json({ message: "Account deleted successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+async function resetPassword(req, res) {
+  try {
+    const user = req.user;
+    const { oldPassword, newPassword } = req.body;
+    const isOldPasswordMatching = comparePassword(
+      oldPassword,
+      user.passwordHash
+    );
+    if (!isOldPasswordMatching) {
+      return res.status(400).json({ message: "Old password is incorrect" });
+    }
+    const newPasswordError = validatePassword(newPassword);
+    if (newPasswordError) {
+      return res.status(400).json({ message: newPasswordError.message });
+    }
+    const hashedNewPassword = hashPassword(newPassword);
+    await User.findByIdAndUpdate(user._id, { passwordHash: hashedNewPassword });
+    return res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  logout,
+  refreshAccessToken,
+  verifyEmail,
+  disableAccount,
+  deleteAccount,
+  resetPassword,
+};
+
+// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjhiZDFmZDU2MTBmNTJlYTE2YmQ3YWU3IiwiaWF0IjoxNzU3MjI0OTE3LCJleHAiOjE3NTcyMzIxMTd9.bthsNxhLlXVgYA9N89cpavxaPCyAVtUV8mYOKdg1WQs

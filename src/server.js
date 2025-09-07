@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const path = require("path");
 const connectDB = require("./services/db");
+const { deleteExpiredOtp } = require("./services/scheduler");
 const apiRoutes = require("./api/v1/routes");
 
 // create express app
@@ -35,6 +36,10 @@ app.get("/health", (_, res) => {
 // api routes
 app.use("/api/v1", apiRoutes);
 
+// delete expired otp
+const deleteExpiredOtpJob = deleteExpiredOtp();
+console.log("OTP cleanup scheduler started - runs every 5 minutes");
+
 // start server
 const port = process.env.PORT || 3001;
 app.listen(port, (err) => {
@@ -43,3 +48,12 @@ app.listen(port, (err) => {
   }
   console.log(`Server is running on port ${port}`);
 });
+
+// stop server
+const stopServer = () => {
+  deleteExpiredOtpJob.stop();
+  process.exit(0);
+};
+
+process.on("SIGINT", stopServer);
+process.on("SIGTERM", stopServer);
