@@ -18,6 +18,6 @@ router.get("/logout", logout);
 router.get("/refresh-access-token", refreshAccessToken);
 router.put("/disable-account/:userId", disableAccount);
 router.put("/reset-password", authenticateToken, resetPassword);
-router.post("/verify-email", verifyEmail);
+router.post("/verify", verifyEmail);
 
 module.exports = router;

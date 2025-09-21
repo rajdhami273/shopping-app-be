@@ -20,7 +20,7 @@ const UserSchema = new mongoose.Schema(
     },
     countryCode: {
       type: String,
-      required: true,
+      default: "+91",
     },
     mobileNumber: {
       type: String,
@@ -45,7 +45,7 @@ const UserSchema = new mongoose.Schema(
       type: {
         isActive: {
           type: Boolean,
-          default: true,
+          default: false,
         },
         inactiveReason: {
           type: String,

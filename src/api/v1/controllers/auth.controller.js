@@ -43,12 +43,13 @@ async function register(req, res) {
 
     // generate otp
     const otp = generateOTP();
-    await new Otp({
+    const otpDoc = await new Otp({
       email,
       otp,
       expiresAt: Date.now() + 3 * 60 * 1000,
     }).save();
-    console.log(otp);
+    console.log("OTP is: ", otp);
+    console.log("OTP doc is: ", otpDoc);
 
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
@@ -77,6 +78,7 @@ async function register(req, res) {
 async function verifyEmail(req, res) {
   try {
     const { email, otp } = req.body;
+    console.log("Verify email body: ", req.body);
     // find otp doc with email and otp and then delete it
     const otpDoc = await Otp.findOne({ email, otp });
     if (!otpDoc) {
@@ -87,18 +89,16 @@ async function verifyEmail(req, res) {
       // now resend a new otp
       // generate new otp doc with new otp and email
       const newOtp = generateOTP();
-      await otpDoc
-        .updateOne({
-          otp: newOtp,
-          expiresAt: Date.now() + 3 * 60 * 1000,
-        })
-        .save();
-      console.log(newOtp);
+      otpDoc.otp = newOtp;
+      otpDoc.expiresAt = Date.now() + 3 * 60 * 1000;
+      const newOtpDoc = await otpDoc.save();
+      console.log("New OTP is: ", newOtp);
+      console.log("New OTP doc is: ", newOtpDoc);
       return res.status(400).json({ message: "OTP expired, new OTP sent." });
     }
     // delete otpDoc
     await otpDoc.deleteOne();
-    await User.updateOne(
+    const updatedUser = await User.findOneAndUpdate(
       { email: RegExp(email, "i") },
       {
         $set: {
@@ -110,9 +110,12 @@ async function verifyEmail(req, res) {
             activeDate: new Date(),
           },
         },
-      }
+      },
+      { new: true }
     );
-    return res.status(200).json({ message: "Email verified successfully" });
+    return res
+      .status(200)
+      .json({ message: "Email verified successfully", data: updatedUser });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -249,5 +252,3 @@ module.exports = {
   deleteAccount,
   resetPassword,
 };
-
-// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjhiZDFmZDU2MTBmNTJlYTE2YmQ3YWU3IiwiaWF0IjoxNzU3MjI0OTE3LCJleHAiOjE3NTcyMzIxMTd9.bthsNxhLlXVgYA9N89cpavxaPCyAVtUV8mYOKdg1WQs

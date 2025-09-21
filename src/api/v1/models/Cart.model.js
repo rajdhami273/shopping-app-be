@@ -13,7 +13,11 @@ const CartSchema = new mongoose.Schema(
           discount: Number, // discount percentage
           product: mongoose.Schema.Types.ObjectId,
           quantity: Number,
-          addedOn: Date,
+          addedOn: {
+            type: Date,
+            default: Date.now,
+          },
+          updatedOn: Date,
         },
       ],
       default: [],

@@ -7,6 +7,7 @@ const path = require("path");
 const connectDB = require("./services/db");
 const { deleteExpiredOtp } = require("./services/scheduler");
 const apiRoutes = require("./api/v1/routes");
+const { sendEmail } = require("./services/emailer");
 
 // create express app
 const app = express();
@@ -54,6 +55,22 @@ const stopServer = () => {
   deleteExpiredOtpJob.stop();
   process.exit(0);
 };
+
+// send email
+// sendEmail("test@test.com", "Test Email", "This is a test email");
+
+// send email with attachment
+// sendEmail(
+//   "test@test.com",
+//   "Test Email with Attachment",
+//   "This is a test email with attachment",
+//   [
+//     {
+//       filename: "test.pdf",
+//       content: "This is a test email with attachment",
+//     },
+//   ]
+// );
 
 process.on("SIGINT", stopServer);
 process.on("SIGTERM", stopServer);
