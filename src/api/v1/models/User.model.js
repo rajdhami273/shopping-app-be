@@ -18,6 +18,10 @@ const UserSchema = new mongoose.Schema(
     address: {
       type: String,
     },
+    currency: {
+      type: String,
+      default: "INR",
+    },
     countryCode: {
       type: String,
       default: "+91",

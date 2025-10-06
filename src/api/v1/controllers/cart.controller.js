@@ -2,10 +2,16 @@ const Cart = require("../models/Cart.model");
 
 async function getCart(req, res) {
   try {
-    const cart = await Cart.find({ user: req.user._id });
-    return res
-      .status(200)
-      .json({ data: cart, message: "Cart fetched successfully" });
+    const cart = await Cart.find({ user: req.user._id }).populate(
+      "products.product"
+    );
+    return res.status(200).json({
+      data: cart[0] ?? {
+        products: [],
+        user: req.user._id,
+      },
+      message: "Cart fetched successfully",
+    });
   } catch (error) {
     return res
       .status(500)
@@ -40,7 +46,6 @@ async function addProductToCart(req, res) {
     if (cart.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Unauthorized" });
     }
-    console.log(cart, req.body, product, quantity, discount);
     const updatedCart = await Cart.findByIdAndUpdate(
       cart._id,
       {
@@ -85,7 +90,7 @@ async function updateProductInCart(req, res) {
         },
       },
       { new: true }
-    );
+    ).populate("products.product");
 
     if (!updatedCart) {
       return res.status(404).json({ message: "Product not found in cart" });
@@ -119,7 +124,7 @@ async function removeProductFromCart(req, res) {
         $pull: { products: { _id: id } },
       },
       { new: true }
-    );
+    ).populate("products.product");
     return res.status(200).json({
       message: "Product removed from cart successfully",
       data: updatedCart,

@@ -19,7 +19,7 @@ function verifyRefreshToken(token) {
 
 function generateAccessToken(id) {
   return jwt.sign({ user: id }, process.env.JWT_SECRET_KEY, {
-    expiresIn: "1h",
+    expiresIn: "10s",
   });
 }
 

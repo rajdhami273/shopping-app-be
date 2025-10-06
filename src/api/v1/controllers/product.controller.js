@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Product = require("../models/Product.model");
 
 async function createProduct(req, res) {
@@ -36,7 +37,32 @@ async function createProduct(req, res) {
 
 async function getProducts(req, res) {
   try {
-    const products = await Product.find();
+    const products = await Product.aggregate([
+      {
+        $lookup: {
+          from: "reviews",
+          localField: "_id",
+          foreignField: "product",
+          as: "reviews",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          price: 1,
+          currency: 1,
+          category: 1,
+          brand: 1,
+          stock: 1,
+          assets: 1,
+          createdBy: 1,
+          reviewCount: { $size: "$reviews" },
+          rating: { $round: [{ $avg: "$reviews.rating" }, 1] },
+        },
+      },
+    ]);
     res
       .status(200)
       .json({ data: products, message: "Products fetched successfully" });
@@ -114,4 +140,57 @@ async function updateProduct(req, res) {
       .json({ message: error.message || "Internal server error" });
   }
 }
-module.exports = { createProduct, getProducts, deleteProduct, updateProduct };
+
+async function getProduct(req, res) {
+  try {
+    const { id } = req.params;
+    const product = await Product.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(id),
+        },
+      },
+      {
+        $lookup: {
+          from: "reviews",
+          localField: "_id",
+          foreignField: "product",
+          as: "reviews",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          price: 1,
+          currency: 1,
+          category: 1,
+          brand: 1,
+          stock: 1,
+          assets: 1,
+          createdBy: 1,
+          reviewCount: { $size: "$reviews" },
+          rating: { $round: [{ $avg: "$reviews.rating" }, 1] },
+        },
+      },
+    ]);
+    if (product.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    res
+      .status(200)
+      .json({ data: product[0], message: "Product fetched successfully" });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: error.message || "Internal server error" });
+  }
+}
+module.exports = {
+  createProduct,
+  getProducts,
+  deleteProduct,
+  updateProduct,
+  getProduct,
+};

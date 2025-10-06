@@ -11,7 +11,10 @@ const CartSchema = new mongoose.Schema(
       type: [
         {
           discount: Number, // discount percentage
-          product: mongoose.Schema.Types.ObjectId,
+          product: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Product",
+          },
           quantity: Number,
           addedOn: {
             type: Date,
